@@ -1,0 +1,10 @@
+{
+    "client_id": "my-smart-app",
+    "redirect_uris": ["http://localhost:8000/callback"],
+    "scope": "launch patient/*.read openid profile",
+    "launch_uri": "http://localhost:8000/launch",
+    "fhir_versions": ["4.0.1"],
+    "name": "Bear's Dashboard",
+    "description": "A SMART-on-FHIR app that shows patient conditions, meds, and vitals.",
+    "icon": "https://example.com/icon.png"
+}
