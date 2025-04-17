@@ -1,0 +1,5 @@
+{
+    "authorization_endpoint": "https://launch.smarthealthit.org/v/r4/sim/eyJhIjoiMSJ9/auth/authorize",
+    "token_endpoint": "https://launch.smarthealthit.org/v/r4/sim/eyJhIjoiMSJ9/auth/token",
+    "capabilities": ["launch-ehr", "client-public", "context-patient"]
+}
