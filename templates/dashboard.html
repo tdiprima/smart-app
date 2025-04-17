@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard for {{ patient.name }}</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; }
+    h1, h2 { color: #333; }
+    ul { padding-left: 1rem; }
+    li { margin-bottom: 0.3rem; }
+    #chart { margin-top: 2rem; }
+  </style>
+</head>
+<body>
+
+  <h1>👋 Hello, {{ patient.name }}</h1>
+
+  <h2>🩺 Conditions</h2>
+  {% if conditions %}
+    <ul>{% for c in conditions %}<li>{{ c }}</li>{% endfor %}</ul>
+  {% else %}
+    <p>No conditions found.</p>
+  {% endif %}
+
+  <h2>💊 Medications</h2>
+  {% if medications %}
+    <ul>{% for m in medications %}<li>{{ m }}</li>{% endfor %}</ul>
+  {% else %}
+    <p>No meds found.</p>
+  {% endif %}
+
+  <h2>🔬 Observations</h2>
+  {% if observations %}
+    <ul>{% for o in observations %}<li>{{ o.label }}: {{ o.value }}</li>{% endfor %}</ul>
+  {% else %}
+    <p>No vitals available.</p>
+  {% endif %}
+
+  <div id="chart"></div>
+
+  {% if chart_obs %}
+  <script>
+    const data = [{
+      x: {{ chart_obs | map(attribute='time') | list | safe }},
+      y: {{ chart_obs | map(attribute='num') | list | safe }},
+      text: {{ chart_obs | map(attribute='label') | list | safe }},
+      type: 'scatter',
+      mode: 'lines+markers',
+      marker: { color: '#2196f3' }
+    }];
+
+    const layout = {
+      title: 'Vitals Over Time',
+      xaxis: { title: 'Time' },
+      yaxis: { title: 'Value' }
+    };
+
+    Plotly.newPlot('chart', data, layout);
+  </script>
+  {% endif %}
+
+</body>
+</html>
