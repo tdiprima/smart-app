@@ -3,8 +3,11 @@ SMART Launcher: App's Launch URL = http://localhost:8000/launch
 """
 import requests
 from flask import Flask, request, redirect, render_template
+from flask import session
+
 
 app = Flask(__name__)
+app.secret_key = "replace-this-with-a-secure-random-value"
 
 AUTH_BASE = "https://launch.smarthealthit.org/v/r4/sim/eyJhIjoiMSJ9"
 FHIR_BASE = f"{AUTH_BASE}/fhir"
@@ -24,13 +27,27 @@ def launch():
     if not iss or not launch_token:
         return "<h2>🚫 Error: Missing SMART launch parameters.</h2>"
 
+    # Discover .well-known config
+    try:
+        discovery = requests.get(f"{iss}/.well-known/smart-configuration").json()
+        auth_endpoint = discovery["authorization_endpoint"]
+        token_endpoint = discovery["token_endpoint"]
+    except Exception as e:
+        return f"<h2>🚫 Failed to discover SMART config: {e}</h2>"
+
+    # Store for callback
+    session["token_endpoint"] = token_endpoint
+    session["iss"] = iss
+
+    # Redirect to SMART auth
     auth_url = (
-        f"{AUTH_BASE}/auth/authorize?"
+        f"{auth_endpoint}?"
         f"response_type=code"
         f"&client_id={CLIENT_ID}"
         f"&redirect_uri={REDIRECT_URI}"
         f"&scope=launch patient/*.read openid profile"
-        f"&aud={FHIR_BASE}"
+        f"&aud={iss}"
+        # f"&aud={FHIR_BASE}"
         f"&launch={launch_token}"
         f"&state=123"
     )
@@ -42,13 +59,17 @@ def callback():
     # print("FULL CALLBACK URL:", request.url)
     code = request.args.get("code")
     state = request.args.get("state")
+    print("State:", state)
 
     if not code:
         return "<h2>🚫 No code returned from authorization step.</h2>"
 
-    # print("Auth Code:", code)
+    # Grab stored token endpoint and FHIR base
+    token_url = session.get("token_endpoint")
+    iss = session.get("iss")
 
-    token_url = f"{AUTH_BASE}/auth/token"
+    if not token_url or not iss:
+        return "<h2>🚫 Session expired or invalid SMART launch.</h2>"
 
     token_response = requests.post(token_url, data={
         "grant_type": "authorization_code",
@@ -69,10 +90,12 @@ def callback():
 
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    # Get patient
-    patient = requests.get(f"{FHIR_BASE}/Patient/{patient_id}", headers=headers).json()
+    # Patient call using discovered iss
+    patient = requests.get(f"{iss}/Patient/{patient_id}", headers=headers).json()
     name = patient.get("name", [{}])[0]
     full_name = f"{name.get('given', ['?'])[0]} {name.get('family', '?')}"
+
+    # return f"<h1>✅ Success!</h1><p>Patient: {full_name} (ID: {patient_id})</p>"
 
     # Get conditions
     conditions = requests.get(f"{FHIR_BASE}/Condition?patient={patient_id}", headers=headers).json().get("entry", [])
