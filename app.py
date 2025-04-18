@@ -4,10 +4,10 @@ SMART Launcher: App's Launch URL = http://localhost:8000/launch
 import requests
 from flask import Flask, request, redirect, render_template
 from flask import session
-
+import os
 
 app = Flask(__name__)
-app.secret_key = "replace-this-with-a-secure-random-value"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY")  # Use environment variable for production
 
 AUTH_BASE = "https://launch.smarthealthit.org/v/r4/sim/eyJhIjoiMSJ9"
 FHIR_BASE = f"{AUTH_BASE}/fhir"
@@ -49,7 +49,7 @@ def launch():
         f"&aud={iss}"
         # f"&aud={FHIR_BASE}"
         f"&launch={launch_token}"
-        f"&state=123"
+        f"&state=123"  # TODO: State should be random per request, not fixed
     )
     return redirect(auth_url)
 
@@ -58,8 +58,6 @@ def launch():
 def callback():
     # print("FULL CALLBACK URL:", request.url)
     code = request.args.get("code")
-    state = request.args.get("state")
-    print("State:", state)
 
     if not code:
         return "<h2>🚫 No code returned from authorization step.</h2>"

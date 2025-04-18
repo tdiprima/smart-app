@@ -26,6 +26,7 @@ This app uses **synthetic patient data** provided by the [SMART Health IT App La
 ### 🧰 How to Run It
 
 ```bash
+export FLASK_SECRET_KEY="replace-this-with-a-secure-random-value"
 python app.py
 ```
 
