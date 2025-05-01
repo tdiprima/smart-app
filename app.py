@@ -97,13 +97,12 @@ def callback():
 
     # Get conditions
     conditions = requests.get(f"{FHIR_BASE}/Condition?patient={patient_id}", headers=headers).json().get("entry", [])
-    cond_list = [c["resource"]["code"]["text"] for c in conditions if "code" in c["resource"]]
+    cond_list = list(set(c["resource"]["code"]["text"] for c in conditions if "code" in c["resource"]))
     cond_list.sort()
 
     # Get medications
     meds = requests.get(f"{FHIR_BASE}/MedicationRequest?patient={patient_id}", headers=headers).json().get("entry", [])
-    med_list = [m["resource"]["medicationCodeableConcept"]["text"] for m in meds if
-                "medicationCodeableConcept" in m["resource"]]
+    med_list = list(set(m["resource"]["medicationCodeableConcept"]["text"] for m in meds if "medicationCodeableConcept" in m["resource"]))
     med_list.sort()
 
     # Get observations
