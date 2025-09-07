@@ -1,13 +1,16 @@
 """
 SMART Launcher: App's Launch URL = http://localhost:8000/launch
 """
-import requests
-from flask import Flask, request, redirect, render_template
-from flask import session
+
 import os
 
+import requests
+from flask import Flask, redirect, render_template, request, session
+
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY")  # Use environment variable for production
+app.secret_key = os.environ.get(
+    "FLASK_SECRET_KEY"
+)  # Use environment variable for production
 
 AUTH_BASE = "https://launch.smarthealthit.org/v/r4/sim/eyJhIjoiMSJ9"
 FHIR_BASE = f"{AUTH_BASE}/fhir"
@@ -18,6 +21,7 @@ REDIRECT_URI = "http://localhost:8000/callback"
 @app.route("/")
 def index():
     return render_template("index.html")
+
 
 @app.route("/launch")
 def launch():
@@ -69,12 +73,16 @@ def callback():
     if not token_url or not iss:
         return "<h2>🚫 Session expired or invalid SMART launch.</h2>"
 
-    token_response = requests.post(token_url, data={
-        "grant_type": "authorization_code",
-        "code": code,
-        "redirect_uri": REDIRECT_URI,
-        "client_id": CLIENT_ID,
-    }, headers={"Content-Type": "application/x-www-form-urlencoded"})
+    token_response = requests.post(
+        token_url,
+        data={
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": REDIRECT_URI,
+            "client_id": CLIENT_ID,
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
 
     # print("Token Status:", token_response.status_code)
     # print("Token Response:", token_response.text)
@@ -96,22 +104,51 @@ def callback():
     # return f"<h1>✅ Success!</h1><p>Patient: {full_name} (ID: {patient_id})</p>"
 
     # Get conditions
-    conditions = requests.get(f"{FHIR_BASE}/Condition?patient={patient_id}", headers=headers).json().get("entry", [])
-    cond_list = list(set(c["resource"]["code"]["text"] for c in conditions if "code" in c["resource"]))
+    conditions = (
+        requests.get(f"{FHIR_BASE}/Condition?patient={patient_id}", headers=headers)
+        .json()
+        .get("entry", [])
+    )
+    cond_list = list(
+        set(
+            c["resource"]["code"]["text"] for c in conditions if "code" in c["resource"]
+        )
+    )
     cond_list.sort()
 
     # Get medications
-    meds = requests.get(f"{FHIR_BASE}/MedicationRequest?patient={patient_id}", headers=headers).json().get("entry", [])
-    med_list = list(set(m["resource"]["medicationCodeableConcept"]["text"] for m in meds if "medicationCodeableConcept" in m["resource"]))
+    meds = (
+        requests.get(
+            f"{FHIR_BASE}/MedicationRequest?patient={patient_id}", headers=headers
+        )
+        .json()
+        .get("entry", [])
+    )
+    med_list = list(
+        set(
+            m["resource"]["medicationCodeableConcept"]["text"]
+            for m in meds
+            if "medicationCodeableConcept" in m["resource"]
+        )
+    )
     med_list.sort()
 
     # Get observations
-    obs = requests.get(f"{FHIR_BASE}/Observation?patient={patient_id}", headers=headers).json().get("entry", [])
+    obs = (
+        requests.get(f"{FHIR_BASE}/Observation?patient={patient_id}", headers=headers)
+        .json()
+        .get("entry", [])
+    )
     chart_obs = []
     obs_list = []
 
     # Filter only specific vital types
-    allowed_obs = ["Body Weight", "Systolic Blood Pressure", "Diastolic Blood Pressure", "Heart rate"]
+    allowed_obs = [
+        "Body Weight",
+        "Systolic Blood Pressure",
+        "Diastolic Blood Pressure",
+        "Heart rate",
+    ]
 
     for o in obs:
         res = o["resource"]
@@ -125,18 +162,15 @@ def callback():
 
         if val is not None:
             obs_list.append({"label": code, "value": f"{val} {unit}"})
-            chart_obs.append({
-                "label": code,
-                "num": val,
-                "time": time
-            })
+            chart_obs.append({"label": code, "num": val, "time": time})
 
-    return render_template("dashboard.html",
+    return render_template(
+        "dashboard.html",
         patient={"name": full_name},
         conditions=cond_list,
         medications=med_list,
         observations=obs_list,
-        chart_obs=chart_obs
+        chart_obs=chart_obs,
     )
 
 
