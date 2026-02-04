@@ -12,6 +12,8 @@ app.secret_key = os.environ.get(
     "FLASK_SECRET_KEY"
 )  # Use environment variable for production
 
+REQUEST_TIMEOUT = 10  # seconds
+
 AUTH_BASE = "https://launch.smarthealthit.org/v/r4/sim/eyJhIjoiMSJ9"
 FHIR_BASE = f"{AUTH_BASE}/fhir"
 CLIENT_ID = "my-smart-app"
@@ -33,7 +35,7 @@ def launch():
 
     # Discover .well-known config
     try:
-        discovery = requests.get(f"{iss}/.well-known/smart-configuration").json()
+        discovery = requests.get(f"{iss}/.well-known/smart-configuration", timeout=REQUEST_TIMEOUT).json()
         auth_endpoint = discovery["authorization_endpoint"]
         token_endpoint = discovery["token_endpoint"]
     except Exception as e:
@@ -82,6 +84,7 @@ def callback():
             "client_id": CLIENT_ID,
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=REQUEST_TIMEOUT,
     )
 
     # print("Token Status:", token_response.status_code)
@@ -97,7 +100,7 @@ def callback():
     headers = {"Authorization": f"Bearer {access_token}"}
 
     # Patient call using discovered iss
-    patient = requests.get(f"{iss}/Patient/{patient_id}", headers=headers).json()
+    patient = requests.get(f"{iss}/Patient/{patient_id}", headers=headers, timeout=REQUEST_TIMEOUT).json()
     name = patient.get("name", [{}])[0]
     full_name = f"{name.get('given', ['?'])[0]} {name.get('family', '?')}"
 
@@ -105,7 +108,7 @@ def callback():
 
     # Get conditions
     conditions = (
-        requests.get(f"{FHIR_BASE}/Condition?patient={patient_id}", headers=headers)
+        requests.get(f"{FHIR_BASE}/Condition?patient={patient_id}", headers=headers, timeout=REQUEST_TIMEOUT)
         .json()
         .get("entry", [])
     )
@@ -119,7 +122,7 @@ def callback():
     # Get medications
     meds = (
         requests.get(
-            f"{FHIR_BASE}/MedicationRequest?patient={patient_id}", headers=headers
+            f"{FHIR_BASE}/MedicationRequest?patient={patient_id}", headers=headers, timeout=REQUEST_TIMEOUT
         )
         .json()
         .get("entry", [])
@@ -135,7 +138,7 @@ def callback():
 
     # Get observations
     obs = (
-        requests.get(f"{FHIR_BASE}/Observation?patient={patient_id}", headers=headers)
+        requests.get(f"{FHIR_BASE}/Observation?patient={patient_id}", headers=headers, timeout=REQUEST_TIMEOUT)
         .json()
         .get("entry", [])
     )
@@ -175,4 +178,5 @@ def callback():
 
 
 if __name__ == "__main__":
-    app.run(port=8000, debug=True)
+    # TODO: export FLASK_DEBUG=true
+    app.run(port=8000, debug=os.environ.get("FLASK_DEBUG", "").lower() == "true")
